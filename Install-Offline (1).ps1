@@ -4,6 +4,8 @@
   A lancer sur la machine OFFLINE, depuis le dossier RustOfflineKit.
   Installe VS Build Tools (linker MSVC + SDK), Rust, rust-src, rust-analyzer,
   puis deploie le projet (optionnel). Les crates sont telechargees par Cargo apres l'installation.
+  Build Tools : layout hors ligne dans vslayout\ s'il existe, sinon buildtools\vs_BuildTools.exe
+  (installation en ligne).
   rust-src : deposer rust-src-<version>.tar.gz (ou .tar.xz) dans le dossier rust\ du kit,
   meme version que le MSI (https://static.rust-lang.org/dist/rust-src-<version>.tar.gz).
 
@@ -37,13 +39,21 @@ function Assert-Exit($proc, $what) {
 # ------------------------------------------------ 1. Visual Studio Build Tools
 if (-not $SkipBuildTools) {
     Write-Host "[1/5] Visual Studio Build Tools" -ForegroundColor Cyan
-    $layout = Join-Path $Kit "vslayout"
-    $vsExe  = Join-Path $layout "vs_BuildTools.exe"
-    if (-not (Test-Path $vsExe)) { throw "Layout introuvable : $vsExe" }
+    # Layout complet (vslayout\, cree avec --layout) : installation sans reseau.
+    # Sinon, bootstrapper seul (buildtools\) : les paquets sont telecharges.
+    $layout  = Join-Path $Kit "vslayout"
+    $offline = Test-Path (Join-Path $layout "Catalog.json")
+    if ($offline) {
+        $vsExe = Join-Path $layout "vs_BuildTools.exe"
+    } else {
+        $vsExe = Join-Path $Kit "buildtools\vs_BuildTools.exe"
+        Write-Host "  pas de layout hors ligne : telechargement des paquets (reseau requis)..."
+    }
+    if (-not (Test-Path $vsExe)) { throw "Installeur Build Tools introuvable : $vsExe" }
 
     # Certificats du layout (necessaires hors ligne pour valider les paquets)
     $certDir = Join-Path $layout "certificates"
-    if (Test-Path $certDir) {
+    if ($offline -and (Test-Path $certDir)) {
         Get-ChildItem $certDir -Include *.p12, *.pfx -Recurse | ForEach-Object {
             try {
                 Import-PfxCertificate -FilePath $_.FullName -CertStoreLocation Cert:\LocalMachine\Root `
@@ -53,7 +63,8 @@ if (-not $SkipBuildTools) {
         }
     }
 
-    $vsArgs = "--noweb --quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+    $vsArgs = "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+    if ($offline) { $vsArgs = "--noweb $vsArgs" }
     $p = Start-Process -FilePath $vsExe -ArgumentList $vsArgs -Wait -PassThru
     Assert-Exit $p "Installation des Build Tools"
 }

@@ -1,7 +1,7 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-  Desinstalle ce qu'Install-Offline.ps1 a installe : Rust (MSI), rust-analyzer,
+  Desinstalle ce qu'Install-Offline.ps1 a installe : Rust (MSI), rust-src, rust-analyzer,
   variable CARGO_NET_OFFLINE. Les elements sensibles sont en option.
 
 .EXAMPLE
@@ -36,6 +36,14 @@ $keys = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
 $rust = Get-ItemProperty $keys -ErrorAction SilentlyContinue |
         Where-Object { $_.DisplayName -like "Rust *" -and $_.PSChildName -match '^\{[0-9A-Fa-f-]+\}$' }
 if ($rust) {
+    # rust-src a ete extrait a la main dans le sysroot : le MSI ne le supprimerait pas.
+    if (Get-Command rustc -ErrorAction SilentlyContinue) {
+        $rustSrc = Join-Path (rustc --print sysroot).Trim() "lib\rustlib\src"
+        if (Test-Path $rustSrc) {
+            Remove-Item $rustSrc -Recurse -Force
+            Write-Host "  rust-src supprime."
+        }
+    }
     foreach ($r in $rust) {
         Write-Host "  desinstallation : $($r.DisplayName)"
         # WaitForExit() n'attend que msiexec lui-meme (Start-Process -Wait peut rester bloque).

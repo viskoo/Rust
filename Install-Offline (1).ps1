@@ -2,8 +2,10 @@
 <#
 .SYNOPSIS
   A lancer sur la machine OFFLINE, depuis le dossier RustOfflineKit.
-  Installe VS Build Tools (linker MSVC + SDK), Rust, rust-analyzer,
+  Installe VS Build Tools (linker MSVC + SDK), Rust, rust-src, rust-analyzer,
   puis deploie le projet (optionnel). Les crates sont telechargees par Cargo apres l'installation.
+  rust-src : deposer rust-src-<version>.tar.gz (ou .tar.xz) dans le dossier rust\ du kit,
+  meme version que le MSI (https://static.rust-lang.org/dist/rust-src-<version>.tar.gz).
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File .\Install-Offline.ps1 -ProjectDest C:\dev\monappli
@@ -12,6 +14,7 @@ param(
     [string]$ProjectDest = "C:\dev\app",
     [switch]$SkipBuildTools,
     [switch]$SkipRust,           # si Rust est deja installe
+    [switch]$SkipRustSrc,
     [switch]$SkipBuildTest
 )
 
@@ -33,7 +36,7 @@ function Assert-Exit($proc, $what) {
 
 # ------------------------------------------------ 1. Visual Studio Build Tools
 if (-not $SkipBuildTools) {
-    Write-Host "[1/4] Visual Studio Build Tools" -ForegroundColor Cyan
+    Write-Host "[1/5] Visual Studio Build Tools" -ForegroundColor Cyan
     $layout = Join-Path $Kit "vslayout"
     $vsExe  = Join-Path $layout "vs_BuildTools.exe"
     if (-not (Test-Path $vsExe)) { throw "Layout introuvable : $vsExe" }
@@ -56,7 +59,7 @@ if (-not $SkipBuildTools) {
 }
 
 # ------------------------------------------------------------------ 2. Rust
-Write-Host "[2/4] Rust" -ForegroundColor Cyan
+Write-Host "[2/5] Rust" -ForegroundColor Cyan
 if ($SkipRust) {
     Write-Host "  ignore (-SkipRust)" -ForegroundColor Yellow
 } else {
@@ -79,10 +82,49 @@ if ([Environment]::GetEnvironmentVariable("CARGO_NET_OFFLINE", "Machine")) {
 }
 Remove-Item Env:\CARGO_NET_OFFLINE -ErrorAction SilentlyContinue
 
-# ------------------------------------------------------------ 3. rust-analyzer
+# ----------------------------------------------------------------- 3. rust-src
+# Sources de la bibliotheque standard (necessaires a rust-analyzer). Le MSI ne les
+# contient pas : on extrait le tarball officiel dans le sysroot (lib\rustlib\src).
+Write-Host "[3/5] rust-src" -ForegroundColor Cyan
+if ($SkipRustSrc) {
+    Write-Host "  ignore (-SkipRustSrc)" -ForegroundColor Yellow
+} else {
+    $srcTar = Get-ChildItem (Join-Path $Kit "rust") -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -match '^rust-src-.+\.tar\.(gz|xz)$' } | Select-Object -First 1
+    if (-not $srcTar) {
+        Write-Warning "rust-src-*.tar.gz introuvable dans $Kit\rust : rust-analyzer n'aura pas les sources de std."
+    } else {
+        Update-SessionPath
+        if (-not (Get-Command rustc -ErrorAction SilentlyContinue)) { throw "rustc introuvable : impossible d'installer rust-src." }
+        $sysroot = (& rustc --print sysroot).Trim()
+        $rustVer = ((& rustc --version) -split ' ')[1]
+        if ($srcTar.Name -notlike "rust-src-$rustVer.*") {
+            Write-Warning "$($srcTar.Name) ne correspond pas a rustc $rustVer."
+        }
+        Write-Host "  extraction de $($srcTar.Name) dans $sysroot..."
+        $tmp = Join-Path $env:TEMP "rust-src-$([guid]::NewGuid())"
+        New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+        try {
+            # tar.exe de Windows (bsdtar) : pas celui de Git, qui ne comprend pas les chemins C:\
+            & "$env:SystemRoot\System32\tar.exe" -xf $srcTar.FullName -C $tmp
+            if ($LASTEXITCODE -ne 0) { throw "Extraction de $($srcTar.Name) impossible (code $LASTEXITCODE)." }
+            $rustlib = Get-ChildItem $tmp -Directory | ForEach-Object { Join-Path $_.FullName "rust-src\lib\rustlib" } |
+                       Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $rustlib) { throw "Structure inattendue dans $($srcTar.Name) (rust-src\lib\rustlib absent)." }
+            $dest = Join-Path $sysroot "lib\rustlib"
+            Remove-Item (Join-Path $dest "src") -Recurse -Force -ErrorAction SilentlyContinue
+            Copy-Item (Join-Path $rustlib "src") $dest -Recurse -Force
+            Write-Host "  rust-src installe dans $dest\src"
+        } finally {
+            Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+# ------------------------------------------------------------ 4. rust-analyzer
 $raZip = Join-Path $Kit "rust\rust-analyzer.zip"
 if (Test-Path $raZip) {
-    Write-Host "[3/4] rust-analyzer" -ForegroundColor Cyan
+    Write-Host "[4/5] rust-analyzer" -ForegroundColor Cyan
     $raDir = Join-Path $env:ProgramFiles "rust-analyzer"
     New-Item -ItemType Directory -Force -Path $raDir | Out-Null
     Expand-Archive -Path $raZip -DestinationPath $raDir -Force
@@ -92,8 +134,8 @@ if (Test-Path $raZip) {
     }
 }
 
-# --------------------------------------------------------------- 4. Projet
-Write-Host "[4/4] Projet" -ForegroundColor Cyan
+# --------------------------------------------------------------- 5. Projet
+Write-Host "[5/5] Projet" -ForegroundColor Cyan
 Update-SessionPath
 $src = Join-Path $Kit "project"
 if (Test-Path $src) {
@@ -106,6 +148,8 @@ if (Test-Path $src) {
 Write-Host "`nVerification :" -ForegroundColor Cyan
 rustc --version
 cargo --version
+$stdSrc = Join-Path (rustc --print sysroot).Trim() "lib\rustlib\src\rust\library"
+if (Test-Path $stdSrc) { Write-Host "rust-src : $stdSrc" } else { Write-Warning "rust-src absent ($stdSrc)." }
 if (Get-Command rust-analyzer -ErrorAction SilentlyContinue) { rust-analyzer --version }
 
 if (-not $SkipBuildTest -and (Test-Path (Join-Path $ProjectDest "Cargo.toml"))) {

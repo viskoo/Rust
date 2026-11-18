@@ -1,0 +1,22 @@
+<header class="st-head">
+  <i class="fas fa-tasks st-icon"></i>
+  <span class="st-title">Tasks</span>
+  <span class="st-state">{{ displayState(state()) }}</span>
+  @if (tasks.loaded()) {
+    <span class="st-count">{{ tasks.total() | number }} task{{ tasks.total() !== 1 ? 's' : '' }}</span>
+  }
+  <app-stream-status class="st-status" [status]="tasks.status()" />
+</header>
+
+<div class="st-body">
+  <app-paged-grid [query]="tasks">
+    <ag-grid-angular class="ag-theme-monitor" [rowData]="tasks.rows()" [columnDefs]="columns.columns()" [gridOptions]="gridOptions" />
+    <app-column-picker gridTools direction="up" [prefs]="columns" />
+    @if (tasks.loaded() && !tasks.total()) {
+      <div class="st-empty">
+        <i class="fas fa-inbox"></i>
+        <span>No task in this state</span>
+      </div>
+    }
+  </app-paged-grid>
+</div>

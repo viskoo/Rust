@@ -31,7 +31,10 @@ export class StateTasksComponent {
     table: 'tasks',
     key: (task) => task.taskId,
     defaultSort: () => ({ field: 'submitTimeMs', descending: true }),
-    fixedFilters: () => [{ field: 'state', op: 'equals', value: this.state() }],
+    fixedFilters: () => [
+      { field: 'state', op: 'equals', value: this.state() },
+      { field: 'sessionState', op: 'equals', value: 'OPEN' },
+    ],
   });
 
   protected readonly gridOptions: GridOptions<Task> = {

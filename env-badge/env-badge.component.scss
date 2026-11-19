@@ -1,0 +1,19 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid var(--env);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--env) 18%, transparent);
+  color: var(--env);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 16px;
+}
+
+:host(.env-dev)  { --env: #3fb950; }
+:host(.env-uta)  { --env: #f0b429; }
+:host(.env-prod) { --env: #f85149; }

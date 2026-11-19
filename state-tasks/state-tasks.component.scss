@@ -1,6 +1,6 @@
 @use 'palette' as p;
 
-:host { display: flex; flex-direction: column; min-height: 0; }
+:host { display: flex; flex: 1; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
 
 .st-head {
   display: flex;
@@ -19,7 +19,9 @@
 .st-status { flex-shrink: 0; margin-left: auto; white-space: nowrap; }
 
 .st-body { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 12px 16px; overflow: hidden; }
-app-paged-grid { flex: 1; }
+app-paged-grid { flex: 1; min-height: 0; }
+
+ag-grid-angular { flex: 1; min-height: 200px; }
 
 .st-empty {
   position: absolute;

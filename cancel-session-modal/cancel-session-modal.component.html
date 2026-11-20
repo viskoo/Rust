@@ -1,0 +1,46 @@
+<div class="dlg-overlay" animate.enter="fade-in" animate.leave="fade-out" (click)="onOverlayClick($event)">
+  <div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="cancel-session-title">
+    <div class="dlg-header">
+      <span class="dlg-title" id="cancel-session-title"><i class="fas fa-ban"></i> Cancel session</span>
+      <button type="button" class="dlg-close" title="Close" [disabled]="cancelling()" (click)="close()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="dlg-body">
+      <p class="dlg-hint">
+        The session and all its pending tasks will be cancelled on the master. This cannot be undone.
+      </p>
+
+      @let s = session();
+      <dl class="summary">
+        <dt>Session ID</dt>
+        <dd>{{ s.sessionId }}</dd>
+        <dt>Session name</dt>
+        <dd>{{ s.clientId || EMPTY }}</dd>
+        <dt>Grid library</dt>
+        <dd>{{ s.gridLibName ? s.gridLibName + (s.gridLibVersion ? ' v' + s.gridLibVersion : '') : EMPTY }}</dd>
+        <dt>User</dt>
+        <dd>{{ s.user || EMPTY }}{{ s.machine ? ' @ ' + s.machine : '' }}</dd>
+      </dl>
+
+      @if (error(); as e) {
+        <div class="dlg-result result-err">
+          <i class="fas fa-times-circle"></i>
+          Cancel failed: {{ e }}
+        </div>
+      }
+
+      <div class="dlg-actions">
+        <button type="button" class="dlg-btn" [disabled]="cancelling()" (click)="close()">Keep running</button>
+        <button type="button" class="dlg-btn danger" [disabled]="cancelling()" (click)="confirm()">
+          @if (cancelling()) {
+            <i class="fas fa-spinner fa-spin"></i> Cancelling…
+          } @else {
+            <i class="fas fa-ban"></i> Cancel session
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

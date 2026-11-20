@@ -1,0 +1,25 @@
+@use 'palette' as p;
+@use 'modal';
+
+.dlg-title i { color: p.$danger-1; }
+
+.summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid p.$border-md;
+  border-radius: 7px;
+  background: p.$ink;
+  font-size: 12.5px;
+  dt { color: p.$text-muted; }
+  dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: p.$text; font-family: p.$mono; }
+}
+
+.dlg-btn.danger {
+  border-color: rgba(p.$danger, 0.5);
+  background: rgba(p.$danger, 0.14);
+  color: p.$danger-1;
+  &:hover:not(:disabled) { background: rgba(p.$danger, 0.24); }
+}

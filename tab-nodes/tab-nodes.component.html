@@ -43,7 +43,10 @@
         <div class="group-head" [class.group-gpu]="group.gpu">
           <i class="fas" [class]="group.icon"></i>
           <span>{{ group.label }}</span>
-          <b>{{ group.nodes.length }}</b>
+          <b>{{ group.online }}</b>
+          @if (group.offline) {
+            <b class="group-off" [title]="group.offline + ' offline'">{{ group.offline }} offline</b>
+          }
         </div>
         <div class="cards-grid">
           @for (node of group.nodes; track node.nodeId) {

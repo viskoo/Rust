@@ -113,6 +113,7 @@
   text-transform: uppercase;
   i { color: p.$live; font-size: 11px; }
   b { padding: 1px 7px; border-radius: 9px; background: rgba(255,255,255,0.06); color: p.$text; font-family: p.$mono; font-size: 11px; font-weight: 500; }
+  b.group-off { background: rgba(248, 81, 73, 0.15); color: p.$danger; }
   &.group-gpu i { color: p.$violet; }
   .cards-grid + & { margin-top: 22px; }
 }

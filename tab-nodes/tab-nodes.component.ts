@@ -10,6 +10,8 @@ interface NodeGroup {
   label: string;
   icon: string;
   nodes: NodeView[];
+  online: number;
+  offline: number;
 }
 
 @Component({
@@ -48,8 +50,8 @@ export class TabNodesComponent {
   protected readonly totalGpus = computed(() => this.gpuNodes().reduce((acc, n) => acc + (n.online ? n.totalGpus : 0), 0));
   protected readonly groups = computed<NodeGroup[]>(() =>
     [
-      { gpu: false, label: 'CPU nodes', icon: 'fa-microchip', nodes: this.filtered().filter((n) => !isGpuNode(n)) },
-      { gpu: true, label: 'GPU nodes', icon: 'fa-bolt', nodes: this.filtered().filter((n) => isGpuNode(n)) },
+      group(false, 'CPU nodes', 'fa-microchip', this.filtered().filter((n) => !isGpuNode(n))),
+      group(true, 'GPU nodes', 'fa-bolt', this.filtered().filter((n) => isGpuNode(n))),
     ].filter((g) => g.nodes.length),
   );
 
@@ -67,4 +69,9 @@ function searchText(node: NodeView): string {
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
+}
+
+function group(gpu: boolean, label: string, icon: string, nodes: NodeView[]): NodeGroup {
+  const online = nodes.filter((n) => n.online).length;
+  return { gpu, label, icon, nodes, online, offline: nodes.length - online };
 }

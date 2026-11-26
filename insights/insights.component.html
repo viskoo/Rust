@@ -1,0 +1,63 @@
+@let ins = insights();
+
+<section class="insight" [class]="'is-' + ins.health.level" [class.not-ready]="!ins.ready">
+
+  <div class="zone zone-health">
+    <div class="health-title"><span class="health-dot"></span>{{ ins.health.title }}</div>
+    <div class="health-detail">{{ ins.health.detail }}</div>
+    <div class="services">
+      <span class="svc-key"><i class="fas fa-satellite-dish"></i>Live data</span>
+      <span class="svc-val" [class.svc-off]="!ins.ready"><span class="dot"></span>{{ freshness() }}</span>
+      <span></span>
+      <app-service-health />
+    </div>
+  </div>
+
+  <div class="zone zone-sessions" [class.idle]="!ins.sessions.open">
+    <div class="zone-head">
+      <span>Sessions</span>
+      <span class="sess-live"><i></i>live</span>
+    </div>
+    <div class="sess-open">
+      <b>{{ ins.sessions.open | number }}</b>
+      <span>open now</span>
+    </div>
+  </div>
+
+  <div class="zone zone-capacity">
+    <div class="zone-head">
+      <span>Capacity</span>
+      <span class="zone-sub">
+        <b>{{ ins.nodes.online }}</b>/{{ ins.nodes.total }} nodes online
+      </span>
+    </div>
+    <div class="meters">
+      <ng-container *ngTemplateOutlet="meter; context: { $implicit: ins.cpu, label: 'CPU', unit: 'cores' }" />
+      <ng-container *ngTemplateOutlet="meter; context: { $implicit: ins.gpu, label: 'GPU', unit: 'GPU' }" />
+    </div>
+  </div>
+
+  <div class="zone zone-live">
+    <div class="zone-head"><span>Task pipeline</span></div>
+    <div class="counters">
+      @for (c of ins.live; track c.label) {
+        <button type="button" class="counter" [class]="'t-' + c.tone" [class.zero]="!c.value" [title]="'Show the ' + c.label.toLowerCase() + ' tasks'" (click)="stateSelected.emit(c.state)">
+          <b>{{ c.value | number }}</b>
+          <span>{{ c.label }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+</section>
+
+<ng-template #meter let-m let-label="label" let-unit="unit">
+  <div class="meter">
+    <app-gauge class="meter-gauge" [value]="m.pct" [label]="label" />
+    <div class="meter-info">
+      <span class="meter-nums"><b>{{ m.used | number }}</b> / {{ m.total | number }} {{ unit }}</span>
+      <span class="meter-free"><b>{{ m.total - m.used | number }}</b> free</span>
+      <span class="meter-nodes">{{ m.nodes ? 'on ' + (m.nodes | number) + ' ' + label + ' nodes' : 'no ' + label + ' node' }}</span>
+    </div>
+  </div>
+</ng-template>
